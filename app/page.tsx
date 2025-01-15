@@ -1,95 +1,97 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
 
+// import Image from "next/image";
+// import styles from "./page.module.css";
+import { useState } from "react";
+import FileUploader from "@/components/Uploader";
+import Link from "next/link";
+
+type ImageType = {
+  name: string;
+  file: string;
+  fileType: string;
+  originalFileSize: number;
+  newFileSize?: number;
+  percentageDiff?: number;
+};
+const CONVERT_TO = "jpeg";
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>app/page.tsx</code>.
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [files, setFiles] = useState<ImageType[]>([]);
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+  const handleFileUpload = async (e: ImageType) => {
+    const convertedFileUrl = `${e.file}-/format/${CONVERT_TO}/-/quality/normal/`;
+
+    const response = await fetch(convertedFileUrl, { method: "HEAD" });
+    const newFileSize = response.headers.get("content-length");
+    const newFileSizeInKb = newFileSize ? parseInt(newFileSize) / 1000 : 0;
+    const originalFileSizeInKb = e.originalFileSize / 1000;
+    const percentageDiff = ((originalFileSizeInKb - newFileSizeInKb) / originalFileSizeInKb) * 100;
+
+    setFiles([
+      ...files,
+      {
+        ...e,
+        file: convertedFileUrl,
+        originalFileSize: parseFloat(originalFileSizeInKb.toFixed(2)),
+        newFileSize: parseFloat(newFileSizeInKb.toFixed(2)),
+        percentageDiff: parseFloat(percentageDiff.toFixed(0)),
+      },
+    ]);
+  };
+  const downloadFile = (url: string, name: string) => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name; // Suggested filename
+    link.click();
+  };
+
+  return (
+    <section>
+      <h1>Hello from UC Converter</h1>
+      <p>Convert any image to any format of your choice</p>
+      <FileUploader handleFileUploadAction={handleFileUpload} />
+      {/* <form action="">
+        <label htmlFor="to-conversion">Convert image (s) to:</label>
+        <select name="to-conversion" id="to-conversion">
+          <option value="avif">AVIF</option>
+          <option value="webp">WEBP</option>
+          <option value="jpeg">JPEG</option>
+        </select>
+        <button>Convert</button>
+      </form> */}
+      {files.map((file, index) => {
+        return (
+          <div key={index}>
+            <img src={file.file} alt={file.name} height={300} />
+            <p>{file.name}</p>
+            <div>
+              <span>
+                {file.fileType}{" "} { file.originalFileSize} kb
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="feather feather-arrow-right"
+                >
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <polyline points="12 5 19 12 12 19"></polyline>
+                </svg>{" "}
+                {CONVERT_TO} { file.newFileSize} kb 
+              </span>
+              <span> { file.percentageDiff }% saved</span>
+            </div>
+            {/* <button onClick={() => downloadFile(file.file, file.name)}>Download</button> */}
+            <Link href={`${file.file}${file.name}.${CONVERT_TO}`} download>Download</Link>
+          </div>
+        );
+      })}
+
+    </section>
   );
 }
