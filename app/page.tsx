@@ -6,13 +6,16 @@ import { useState } from "react";
 import FileUploader from "@/components/Uploader";
 import Link from "next/link";
 import { ImageType } from "@/types";
+import { getTargetDimensions } from '../utils/index';
 
 export default function Home() {
   const [files, setFiles] = useState<ImageType[]>([]);
-  const [fileType, setFileType] = useState("jpg"); // avif, webp, jpeg
-  const convertedFileUrl = (image: string) =>
-    `${image}-/format/${fileType}/-/quality/normal/`;
-
+  const [fileType, setFileType] = useState("avif"); // avif, webp, jpeg
+  const convertedFileUrl = (cdnUrl: string) => {
+    return fileType === "avif"
+      ? `${cdnUrl}-/preview/1000x1000/`
+      : `${cdnUrl}-/format/${fileType}/`;
+  }
   // const handleSelectFileType = async (e: React.FormEvent<HTMLSelectElement>) => {
   //   e.preventDefault();
   //   const selectedConversionType = (e.target as HTMLSelectElement).value;
@@ -30,58 +33,66 @@ export default function Home() {
     setFileType(values.fileType as string);
 
     const convertImages = async (images: ImageType[]) => {
-      const newOptimizedUrl = (cdnUrl: string) => {
+      const newOptimizedUrl = (cdnUrl: string, width: number, height: number,) => {
+        const targetDimensions = getTargetDimensions(width, height);
         return values.fileType === "avif"
-          ? `${cdnUrl}-/format/auto/-/preview/1000x1000/`
+          ? `${cdnUrl}-/preview/${targetDimensions[0]}x${targetDimensions[1]}/`
           : `${cdnUrl}-/format/${values.fileType}/`;
       };
 
+      // Use Promise.all to resolve all async operations
+      const imagesConverted = await Promise.all(
+        images.map(async (image) => {
+          const url = newOptimizedUrl(image.cdnUrl, image?.width ?? 0, image?.height ?? 0);
+          const response = await fetch(url, {
+            method: "HEAD",
+          });
+          const newFileSize = response.headers.get("content-length");
+          const newFileSizeInKb = newFileSize
+            ? parseInt(newFileSize) / 1000
+            : 0;
+          const originalFileSizeInKb = image.originalFileSize;
+          const percentageDiff =
+            ((originalFileSizeInKb - newFileSizeInKb) / originalFileSizeInKb) *
+            100;
+
+          return {
+            ...image,
+            optimizedUrl: url,
+            newFileSize: parseFloat(newFileSizeInKb.toFixed(2)),
+            percentageDiff: parseFloat(percentageDiff.toFixed(0)),
+          };
+        })
+      );
+
+      console.log(imagesConverted); // Now it will have all converted images
+      setFiles(imagesConverted);
+    };
+
+    await convertImages(files);
+  };
+
+  const convertImages = async (images: ImageType[]) => {
+    const imagesConverted = await Promise.all(
       images.map(async (image) => {
-        const response = await fetch(newOptimizedUrl(image.cdnUrl), {
+        const response = await fetch(convertedFileUrl(image.cdnUrl), {
           method: "HEAD",
         });
         const newFileSize = response.headers.get("content-length");
         const newFileSizeInKb = newFileSize ? parseInt(newFileSize) / 1000 : 0;
-        const originalFileSizeInKb = image.originalFileSize;
+        const originalFileSizeInKb = image.originalFileSize / 1000;
         const percentageDiff =
-          ((originalFileSizeInKb - newFileSizeInKb) / originalFileSizeInKb) *
-          100;
-
-        setFiles([
-          {
-            ...image,
-            optimizedUrl: newOptimizedUrl(image.cdnUrl),
-            newFileSize: parseFloat(newFileSizeInKb.toFixed(2)),
-            percentageDiff: parseFloat(percentageDiff.toFixed(0)),
-          },
-        ]);
-      });
-    };
-    convertImages(files);
-  };
-
-  const convertImages = async (images: ImageType[]) => {
-    images.map(async (image) => {
-      const response = await fetch(convertedFileUrl(image.cdnUrl), {
-        method: "HEAD",
-      });
-      const newFileSize = response.headers.get("content-length");
-      const newFileSizeInKb = newFileSize ? parseInt(newFileSize) / 1000 : 0;
-      const originalFileSizeInKb = image.originalFileSize / 1000;
-      const percentageDiff =
-        ((originalFileSizeInKb - newFileSizeInKb) / originalFileSizeInKb) * 100;
-
-      setFiles([
-        ...files,
-        {
+          ((originalFileSizeInKb - newFileSizeInKb) / originalFileSizeInKb) * 100;
+        return {
           ...image,
           optimizedUrl: convertedFileUrl(image.cdnUrl),
           originalFileSize: parseFloat(originalFileSizeInKb.toFixed(2)),
           newFileSize: parseFloat(newFileSizeInKb.toFixed(2)),
           percentageDiff: parseFloat(percentageDiff.toFixed(0)),
-        },
-      ]);
-    });
+        };
+      })
+    );
+    setFiles([...files, ...imagesConverted]);
   };
 
   const handleFileUpload = async (e: ImageType) => {
@@ -139,6 +150,7 @@ export default function Home() {
             {/* <button onClick={() => downloadFile(file.file, file.name)}>Download</button> */}
             <Link
               href={`${file.optimizedUrl}${file.name}.${fileType}`}
+              target="_blank"
               download
             >
               Download

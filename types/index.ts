@@ -6,4 +6,6 @@ export type ImageType = {
   newFileSize?: number;
   optimizedUrl?: string;
   percentageDiff?: number;
+  width?: number;
+  height?: number;
 };
