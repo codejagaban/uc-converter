@@ -17,7 +17,7 @@ export default function FileUploader({
   const uploaderRef = useRef<InstanceType<UploadCtxProvider> | null>(null);
   const onFileUploadSuccess = (e: OutputFileEntry<OutputCollectionStatus>) => {
 
-    handleFileUploadAction({ name: e.name, file: `${e.cdnUrl}` as string, fileType: e.mimeType.split("/").slice(1)[0], originalFileSize: e.size });
+    handleFileUploadAction({ name: e.name, cdnUrl: `${e.cdnUrl}` as string, fileType: e.mimeType.split("/").slice(1)[0], originalFileSize: e.size });
   };
   const onFileUploadFailed = (e: OutputFileEntry<OutputCollectionStatus>) => {
     console.log(e);
