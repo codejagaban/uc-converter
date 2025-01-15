@@ -8,11 +8,12 @@ import {
 } from "@uploadcare/react-uploader";
 import "@uploadcare/react-uploader/core.css";
 import { useRef } from "react";
+import { ImageType } from "@/types";
 
 export default function FileUploader({
   handleFileUploadAction,
 }: {
-  handleFileUploadAction: (e: { name: string, file: string; fileType: string, originalFileSize: number, }) => void;
+  handleFileUploadAction: (e: ImageType) => void;
 }) {
   const uploaderRef = useRef<InstanceType<UploadCtxProvider> | null>(null);
   const onFileUploadSuccess = (e: OutputFileEntry<OutputCollectionStatus>) => {

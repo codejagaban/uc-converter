@@ -2,25 +2,16 @@
 
 // import Image from "next/image";
 // import styles from "./page.module.css";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import FileUploader from "@/components/Uploader";
 import Link from "next/link";
-
-type ImageType = {
-  name: string;
-  cdnUrl: string;
-  fileType: string;
-  originalFileSize: number;
-  newFileSize?: number;
-  optimizedUrl?: string;
-  percentageDiff?: number;
-};
+import { ImageType } from "@/types";
 
 export default function Home() {
   const [files, setFiles] = useState<ImageType[]>([]);
   const [fileType, setFileType] = useState("jpg"); // avif, webp, jpeg
-  const convertedFileUrl = (image: string) => (`${image}-/format/${fileType}/-/quality/normal/`);
-
+  const convertedFileUrl = (image: string) =>
+    `${image}-/format/${fileType}/-/quality/normal/`;
 
   // const handleSelectFileType = async (e: React.FormEvent<HTMLSelectElement>) => {
   //   e.preventDefault();
@@ -34,20 +25,28 @@ export default function Home() {
 
     // Convert formData to an object for easier handling
     const values = Object.fromEntries(formData.entries());
-  
+
     console.log(values);
     setFileType(values.fileType as string);
+
     const convertImages = async (images: ImageType[]) => {
-      const newOptimizedUrl = (cdnUrl: string) => (`${cdnUrl}-/format/${values.fileType}/-/quality/normal/`);
+      const newOptimizedUrl = (cdnUrl: string) => {
+        return values.fileType === "avif"
+          ? `${cdnUrl}-/format/auto/-/preview/1000x1000/`
+          : `${cdnUrl}-/format/${values.fileType}/`;
+      };
 
       images.map(async (image) => {
-        const response = await fetch(newOptimizedUrl(image.cdnUrl), { method: "HEAD" });
+        const response = await fetch(newOptimizedUrl(image.cdnUrl), {
+          method: "HEAD",
+        });
         const newFileSize = response.headers.get("content-length");
         const newFileSizeInKb = newFileSize ? parseInt(newFileSize) / 1000 : 0;
         const originalFileSizeInKb = image.originalFileSize;
-        const percentageDiff = ((originalFileSizeInKb - newFileSizeInKb) / originalFileSizeInKb) * 100;
+        const percentageDiff =
+          ((originalFileSizeInKb - newFileSizeInKb) / originalFileSizeInKb) *
+          100;
 
-  
         setFiles([
           {
             ...image,
@@ -56,20 +55,21 @@ export default function Home() {
             percentageDiff: parseFloat(percentageDiff.toFixed(0)),
           },
         ]);
-       });
-    }
+      });
+    };
     convertImages(files);
-  }
+  };
 
   const convertImages = async (images: ImageType[]) => {
-
-
     images.map(async (image) => {
-      const response = await fetch(convertedFileUrl(image.cdnUrl), { method: "HEAD" });
+      const response = await fetch(convertedFileUrl(image.cdnUrl), {
+        method: "HEAD",
+      });
       const newFileSize = response.headers.get("content-length");
       const newFileSizeInKb = newFileSize ? parseInt(newFileSize) / 1000 : 0;
       const originalFileSizeInKb = image.originalFileSize / 1000;
-      const percentageDiff = ((originalFileSizeInKb - newFileSizeInKb) / originalFileSizeInKb) * 100;
+      const percentageDiff =
+        ((originalFileSizeInKb - newFileSizeInKb) / originalFileSizeInKb) * 100;
 
       setFiles([
         ...files,
@@ -81,8 +81,8 @@ export default function Home() {
           percentageDiff: parseFloat(percentageDiff.toFixed(0)),
         },
       ]);
-     });
-  }
+    });
+  };
 
   const handleFileUpload = async (e: ImageType) => {
     const image = [e];
@@ -103,7 +103,7 @@ export default function Home() {
       <form action="" onSubmit={handleConversion}>
         <label htmlFor="fileType">Convert image (s) to:</label>
         <select name="fileType" id="fileType">
-          {/* <option value="avif">AVIF</option> */}
+          <option value="avif">AVIF</option>
           <option value="webp">WEBP</option>
           <option value="jpeg">JPEG</option>
         </select>
@@ -116,7 +116,7 @@ export default function Home() {
             <p>{file.name}</p>
             <div>
               <span>
-                {file.fileType}{" "} { file.originalFileSize} kb
+                {file.fileType} {file.originalFileSize} kb
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="24"
@@ -132,16 +132,20 @@ export default function Home() {
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                   <polyline points="12 5 19 12 12 19"></polyline>
                 </svg>{" "}
-                {fileType} { file.newFileSize} kb 
+                {fileType} {file.newFileSize} kb
               </span>
-              <span> { file.percentageDiff }% saved</span>
+              <span> {file.percentageDiff}% saved</span>
             </div>
             {/* <button onClick={() => downloadFile(file.file, file.name)}>Download</button> */}
-            <Link href={`${file.optimizedUrl}${file.name}.${fileType}`} download>Download</Link>
+            <Link
+              href={`${file.optimizedUrl}${file.name}.${fileType}`}
+              download
+            >
+              Download
+            </Link>
           </div>
         );
       })}
-
     </section>
   );
 }
